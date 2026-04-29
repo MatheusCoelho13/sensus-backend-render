@@ -64,17 +64,14 @@ class AnaliseServiceTest {
     void deveProcessarImagemComSucesso() {
         byte[] imagem = new byte[100];
         IAResponseDTO iaResponse = new IAResponseDTO(
-                List.of(new ObjetoDetectadoDTO("person", "perto", true)),
-                1711370000L
+                List.of(new ObjetoDetectadoDTO("person", "perto", true, null, null, null)),
+                1711370000L, null
         );
         Analise analise = criarAnalise(List.of(criarObjeto("person", "perto", true)));
-        AnaliseResponseDTO responseDTO = new AnaliseResponseDTO(1L, 1711370000L,
-                List.of(new ObjetoDetectadoDTO("person", "perto", true)));
 
         when(iaIntegrationService.enviarParaIA(imagem)).thenReturn(Mono.just(iaResponse));
         when(mapper.iaResponseToAnalise(iaResponse)).thenReturn(analise);
         when(analiseRepository.save(any())).thenReturn(analise);
-        when(mapper.toDTO(analise)).thenReturn(responseDTO);
 
         AnaliseResponseDTO result = analiseService.processarImagem(imagem);
 
@@ -89,56 +86,48 @@ class AnaliseServiceTest {
         byte[] imagem = new byte[100];
         IAResponseDTO iaResponse = new IAResponseDTO(
                 List.of(
-                        new ObjetoDetectadoDTO("person", "perto", true),
-                        new ObjetoDetectadoDTO("banana", "longe", false) // irrelevante
+                        new ObjetoDetectadoDTO("person", "perto", true, null, null, null),
+                        new ObjetoDetectadoDTO("banana", "longe", false, null, null, null)
                 ),
-                1711370000L
+                1711370000L, null
         );
-
         Analise analise = criarAnalise(List.of(
                 criarObjeto("person", "perto", true),
                 criarObjeto("banana", "longe", false)
         ));
-        AnaliseResponseDTO responseDTO = new AnaliseResponseDTO(1L, 1711370000L,
-                List.of(new ObjetoDetectadoDTO("person", "perto", true)));
 
         when(iaIntegrationService.enviarParaIA(imagem)).thenReturn(Mono.just(iaResponse));
         when(mapper.iaResponseToAnalise(iaResponse)).thenReturn(analise);
         when(analiseRepository.save(any())).thenReturn(analise);
-        when(mapper.toDTO(analise)).thenReturn(responseDTO);
 
-        analiseService.processarImagem(imagem);
+        AnaliseResponseDTO result = analiseService.processarImagem(imagem);
 
-        // Verifica que apenas "person" foi mantido no analise antes de salvar
-        verify(analiseRepository).save(argThat(a ->
-                a.getObjetos().stream().noneMatch(o -> "banana".equals(o.getNome()))
-        ));
+        // filtro atua nos DTOs da resposta, não na entidade persistida
+        assertThat(result.objetos()).extracting("nome").containsExactly("person");
+        verify(analiseRepository).save(any());
     }
 
     @Test
     void deveOrdenarObjetosComIsClosePrimeiro() {
         byte[] imagem = new byte[100];
-        IAResponseDTO iaResponse = new IAResponseDTO(List.of(), 1711370000L);
+        // ordenação age nos DTOs vindos da IA, não na entidade persistida
+        IAResponseDTO iaResponse = new IAResponseDTO(List.of(
+                new ObjetoDetectadoDTO("car", "longe", false, null, null, null),
+                new ObjetoDetectadoDTO("person", "perto", true, null, null, null),
+                new ObjetoDetectadoDTO("chair", "longe", false, null, null, null)
+        ), 1711370000L, null);
 
-        Analise analise = criarAnalise(List.of(
-                criarObjeto("car", "longe", false),
-                criarObjeto("person", "perto", true),
-                criarObjeto("chair", "medio", false)
-        ));
-        AnaliseResponseDTO responseDTO = new AnaliseResponseDTO(1L, 1711370000L, List.of());
+        Analise analise = criarAnalise(List.of());
 
         when(iaIntegrationService.enviarParaIA(imagem)).thenReturn(Mono.just(iaResponse));
         when(mapper.iaResponseToAnalise(iaResponse)).thenReturn(analise);
         when(analiseRepository.save(any())).thenReturn(analise);
-        when(mapper.toDTO(analise)).thenReturn(responseDTO);
 
-        analiseService.processarImagem(imagem);
+        AnaliseResponseDTO result = analiseService.processarImagem(imagem);
 
-        verify(analiseRepository).save(argThat(a -> {
-            List<ObjetoDetectado> objs = a.getObjetos();
-            return Boolean.TRUE.equals(objs.get(0).getIsClose()) // person (perto) primeiro
-                    && !Boolean.TRUE.equals(objs.get(1).getIsClose()); // restantes depois
-        }));
+        // isClose=true deve vir primeiro
+        assertThat(result.objetos().get(0).nome()).isEqualTo("person");
+        assertThat(result.objetos().get(0).isClose()).isTrue();
     }
 
     @Test
@@ -166,13 +155,11 @@ class AnaliseServiceTest {
     void naoDevePersistirQuandoPersistenciaDesabilitada() {
         props.getPersistencia().setHabilitada(false);
         byte[] imagem = new byte[100];
-        IAResponseDTO iaResponse = new IAResponseDTO(List.of(), 1711370000L);
+        IAResponseDTO iaResponse = new IAResponseDTO(List.of(), 1711370000L, null);
         Analise analise = criarAnalise(List.of());
-        AnaliseResponseDTO responseDTO = new AnaliseResponseDTO(null, 1711370000L, List.of());
 
         when(iaIntegrationService.enviarParaIA(imagem)).thenReturn(Mono.just(iaResponse));
         when(mapper.iaResponseToAnalise(iaResponse)).thenReturn(analise);
-        when(mapper.toDTO(analise)).thenReturn(responseDTO);
 
         analiseService.processarImagem(imagem);
 
@@ -183,7 +170,7 @@ class AnaliseServiceTest {
     void deveBuscarAnalisePorId() {
         Analise analise = criarAnalise(List.of());
         analise.setId(42L);
-        AnaliseResponseDTO dto = new AnaliseResponseDTO(42L, 1711370000L, List.of());
+        AnaliseResponseDTO dto = new AnaliseResponseDTO(42L, 1711370000L, List.of(), null);
 
         when(analiseRepository.findById(42L)).thenReturn(Optional.of(analise));
         when(mapper.toDTO(analise)).thenReturn(dto);
@@ -205,7 +192,7 @@ class AnaliseServiceTest {
     void deveListarAnalisesPaginado() {
         Analise analise = criarAnalise(List.of());
         Page<Analise> page = new PageImpl<>(List.of(analise));
-        AnaliseResponseDTO dto = new AnaliseResponseDTO(1L, 1711370000L, List.of());
+        AnaliseResponseDTO dto = new AnaliseResponseDTO(1L, 1711370000L, List.of(), null);
 
         when(analiseRepository.findAllByOrderByTimestampDesc(any())).thenReturn(page);
         when(mapper.toDTO(analise)).thenReturn(dto);

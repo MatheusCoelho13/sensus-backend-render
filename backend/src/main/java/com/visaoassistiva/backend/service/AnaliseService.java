@@ -4,11 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.visaoassistiva.backend.config.AppProperties;
 import com.visaoassistiva.backend.dto.IAResponseDTO;
 import com.visaoassistiva.backend.dto.response.AnaliseResponseDTO;
+import com.visaoassistiva.backend.dto.response.ObjetoDetectadoDTO;
 import com.visaoassistiva.backend.exception.AnaliseNotFoundException;
 import com.visaoassistiva.backend.integration.IAIntegrationService;
 import com.visaoassistiva.backend.mapper.AnaliseMapper;
 import com.visaoassistiva.backend.model.Analise;
-import com.visaoassistiva.backend.model.ObjetoDetectado;
 import com.visaoassistiva.backend.repository.AnaliseRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,20 +48,20 @@ public class AnaliseService {
 
         IAResponseDTO iaResponse = iaIntegrationService.enviarParaIA(imagem).block();
 
+        // Build entity for persistence (entity doesn't need lado/orientacao)
         Analise analise = mapper.iaResponseToAnalise(iaResponse);
-
-        List<ObjetoDetectado> filtrados = filtrar(analise.getObjetos());
-        List<ObjetoDetectado> ordenados = ordenar(filtrados);
-        analise.getObjetos().clear();
-        analise.getObjetos().addAll(ordenados);
-
         persistirResultado(analise, iaResponse);
+
+        // Build response from IA DTOs directly to preserve lado and orientacao
+        List<ObjetoDetectadoDTO> source = iaResponse.objetos() != null ? iaResponse.objetos() : List.of();
+        List<ObjetoDetectadoDTO> filtrados = filtrarDTOs(source);
+        List<ObjetoDetectadoDTO> ordenados = ordenarDTOs(filtrados);
 
         boolean persistida = props.getPersistencia().isHabilitada() && analise.getId() != null;
         log.debug("[ANALISE] Concluída: objetos={} (após filtro) persistida={} id={}",
                 ordenados.size(), persistida, analise.getId());
 
-        return mapper.toDTO(analise);
+        return new AnaliseResponseDTO(analise.getId(), analise.getTimestamp(), ordenados, iaResponse.orientacao());
     }
 
     public Page<AnaliseResponseDTO> listarAnalises(Pageable pageable) {
@@ -84,20 +84,20 @@ public class AnaliseService {
         }
     }
 
-    private List<ObjetoDetectado> filtrar(List<ObjetoDetectado> objetos) {
+    private List<ObjetoDetectadoDTO> filtrarDTOs(List<ObjetoDetectadoDTO> objetos) {
         List<String> classes = props.getFiltro().getClassesRelevantes();
         if (classes.isEmpty()) {
             return objetos;
         }
         return objetos.stream()
-                .filter(o -> classes.contains(o.getNome()))
+                .filter(o -> classes.contains(o.nome()))
                 .toList();
     }
 
-    private List<ObjetoDetectado> ordenar(List<ObjetoDetectado> objetos) {
+    private List<ObjetoDetectadoDTO> ordenarDTOs(List<ObjetoDetectadoDTO> objetos) {
         return objetos.stream()
-                .sorted(Comparator.comparing((ObjetoDetectado o) -> !Boolean.TRUE.equals(o.getIsClose()))
-                        .thenComparing(ObjetoDetectado::getNome))
+                .sorted(Comparator.comparing((ObjetoDetectadoDTO o) -> !Boolean.TRUE.equals(o.isClose()))
+                        .thenComparing(ObjetoDetectadoDTO::nome))
                 .toList();
     }
 

@@ -6,5 +6,6 @@ import java.util.List;
 
 public record IAResponseDTO(
         List<ObjetoDetectadoDTO> objetos,
-        Long timestamp
+        Long timestamp,
+        String orientacao
 ) {}

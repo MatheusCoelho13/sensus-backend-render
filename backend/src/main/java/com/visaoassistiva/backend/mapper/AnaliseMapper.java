@@ -13,10 +13,14 @@ import java.util.List;
 public class AnaliseMapper {
 
     public AnaliseResponseDTO toDTO(Analise analise) {
+        return toDTO(analise, null);
+    }
+
+    public AnaliseResponseDTO toDTO(Analise analise, String orientacao) {
         List<ObjetoDetectadoDTO> objetosDTO = analise.getObjetos().stream()
                 .map(this::objetoToDTO)
                 .toList();
-        return new AnaliseResponseDTO(analise.getId(), analise.getTimestamp(), objetosDTO);
+        return new AnaliseResponseDTO(analise.getId(), analise.getTimestamp(), objetosDTO, orientacao);
     }
 
     public Analise toEntity(AnaliseResponseDTO dto) {
@@ -27,7 +31,7 @@ public class AnaliseMapper {
     }
 
     public ObjetoDetectadoDTO objetoToDTO(ObjetoDetectado objeto) {
-        return new ObjetoDetectadoDTO(objeto.getNome(), objeto.getDistancia(), objeto.getIsClose());
+        return new ObjetoDetectadoDTO(objeto.getNome(), objeto.getDistancia(), objeto.getIsClose(), null, null, null);
     }
 
     public Analise iaResponseToAnalise(IAResponseDTO iaResponse) {

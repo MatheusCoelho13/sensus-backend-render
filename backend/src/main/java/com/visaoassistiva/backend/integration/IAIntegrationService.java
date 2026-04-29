@@ -1,5 +1,6 @@
 package com.visaoassistiva.backend.integration;
 
+import com.visaoassistiva.backend.dto.IAModelInfoDTO;
 import com.visaoassistiva.backend.dto.IAResponseDTO;
 import com.visaoassistiva.backend.exception.IAServiceException;
 import org.slf4j.Logger;
@@ -54,6 +55,23 @@ public class IAIntegrationService {
                         System.currentTimeMillis() - inicio))
                 .onErrorMap(e -> !(e instanceof IAServiceException),
                         e -> new IAServiceException("Falha ao comunicar com serviço de IA: " + e.getMessage()));
+    }
+
+    public String obterNomeModelo() {
+        try {
+            IAModelInfoDTO info = webClient.get()
+                    .uri("/model")
+                    .retrieve()
+                    .bodyToMono(IAModelInfoDTO.class)
+                    .block(Duration.ofSeconds(3));
+            if (info != null && info.modelPath() != null) {
+                String path = info.modelPath();
+                return path.substring(path.lastIndexOf('/') + 1);
+            }
+        } catch (Exception e) {
+            log.debug("[IA] Não foi possível obter info do modelo: {}", e.getMessage());
+        }
+        return "desconhecido";
     }
 
     public boolean verificarSaude() {

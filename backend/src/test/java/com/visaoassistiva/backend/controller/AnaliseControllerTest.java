@@ -43,12 +43,12 @@ class AnaliseControllerTest {
     @Test
     void postAnalisar_deveRetornar200QuandoSucesso() throws Exception {
         AnaliseResponseDTO dto = new AnaliseResponseDTO(1L, 1711370000L,
-                List.of(new ObjetoDetectadoDTO("person", "perto", true)));
+                List.of(new ObjetoDetectadoDTO("person", "perto", true, null, null, null)), null);
 
         when(analiseService.processarImagem(any())).thenReturn(dto);
 
         String body = """
-                {"imagemBase64": "%s"}
+                {"imagem_base64": "%s"}
                 """.formatted(BASE64_VALIDO);
 
         mockMvc.perform(post("/api/analisar")
@@ -63,7 +63,7 @@ class AnaliseControllerTest {
     @Test
     void postAnalisar_deveRetornar400QuandoBase64Invalido() throws Exception {
         String body = """
-                {"imagemBase64": "!!!nao-e-base64!!!"}
+                {"imagem_base64": "!!!nao-e-base64!!!"}
                 """;
 
         mockMvc.perform(post("/api/analisar")
@@ -88,7 +88,7 @@ class AnaliseControllerTest {
         when(analiseService.processarImagem(any())).thenThrow(new IAServiceException("IA fora do ar"));
 
         String body = """
-                {"imagemBase64": "%s"}
+                {"imagem_base64": "%s"}
                 """.formatted(BASE64_VALIDO);
 
         mockMvc.perform(post("/api/analisar")
@@ -100,7 +100,7 @@ class AnaliseControllerTest {
 
     @Test
     void getAnalises_deveRetornar200ComPaginacao() throws Exception {
-        AnaliseResponseDTO dto = new AnaliseResponseDTO(1L, 1711370000L, List.of());
+        AnaliseResponseDTO dto = new AnaliseResponseDTO(1L, 1711370000L, List.of(), null);
         when(analiseService.listarAnalises(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(dto)));
 
@@ -111,7 +111,7 @@ class AnaliseControllerTest {
 
     @Test
     void getAnalisePorId_deveRetornar200QuandoEncontrado() throws Exception {
-        AnaliseResponseDTO dto = new AnaliseResponseDTO(42L, 1711370000L, List.of());
+        AnaliseResponseDTO dto = new AnaliseResponseDTO(42L, 1711370000L, List.of(), null);
         when(analiseService.buscarPorId(42L)).thenReturn(dto);
 
         mockMvc.perform(get("/api/analises/42"))

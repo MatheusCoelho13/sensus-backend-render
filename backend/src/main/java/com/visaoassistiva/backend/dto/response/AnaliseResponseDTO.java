@@ -5,5 +5,6 @@ import java.util.List;
 public record AnaliseResponseDTO(
         Long id,
         Long timestamp,
-        List<ObjetoDetectadoDTO> objetos
+        List<ObjetoDetectadoDTO> objetos,
+        String orientacao
 ) {}

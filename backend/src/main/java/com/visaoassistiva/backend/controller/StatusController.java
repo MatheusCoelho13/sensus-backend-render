@@ -21,9 +21,11 @@ public class StatusController {
     @GetMapping("/status")
     public ResponseEntity<ApiResponseWrapper<StatusResponseDTO>> status() {
         boolean iaUp = iaIntegrationService.verificarSaude();
+        String modelo = iaUp ? iaIntegrationService.obterNomeModelo() : "indisponível";
         StatusResponseDTO dto = new StatusResponseDTO(
                 "UP",
                 iaUp ? "UP" : "DOWN",
+                modelo,
                 System.currentTimeMillis() / 1000
         );
         return ResponseEntity.ok(ApiResponseWrapper.ok(dto));

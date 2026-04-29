@@ -13,9 +13,17 @@ import java.util.List;
 public class AppProperties {
 
     private Ia ia = new Ia();
+    private Cors cors = new Cors();
     private RateLimit rateLimit = new RateLimit();
     private Persistencia persistencia = new Persistencia();
     private Filtro filtro = new Filtro();
+    private Websocket websocket = new Websocket();
+
+    @Getter
+    @Setter
+    public static class Cors {
+        private List<String> allowedOrigins = List.of("http://localhost:5173");
+    }
 
     @Getter
     @Setter
@@ -41,5 +49,12 @@ public class AppProperties {
     @Setter
     public static class Filtro {
         private List<String> classesRelevantes = new ArrayList<>();
+    }
+
+    @Getter
+    @Setter
+    public static class Websocket {
+        private int maxTextMessageSizeBytes = 10_485_760;
+        private int maxBinaryMessageSizeBytes = 10_485_760;
     }
 }

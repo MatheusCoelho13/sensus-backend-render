@@ -26,12 +26,13 @@ class StatusControllerTest {
     @Test
     void getStatus_deveRetornarBackendUpEIaUp() throws Exception {
         when(iaIntegrationService.verificarSaude()).thenReturn(true);
+        when(iaIntegrationService.obterNomeModelo()).thenReturn("best.pt");
 
         mockMvc.perform(get("/api/status"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sucesso").value(true))
                 .andExpect(jsonPath("$.dados.backend").value("UP"))
-                .andExpect(jsonPath("$.dados.iaService").value("UP"))
+                .andExpect(jsonPath("$.dados.ia_service").value("UP"))
                 .andExpect(jsonPath("$.dados.timestamp").isNumber());
     }
 
@@ -42,6 +43,6 @@ class StatusControllerTest {
         mockMvc.perform(get("/api/status"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dados.backend").value("UP"))
-                .andExpect(jsonPath("$.dados.iaService").value("DOWN"));
+                .andExpect(jsonPath("$.dados.ia_service").value("DOWN"));
     }
 }
